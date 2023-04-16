@@ -233,23 +233,25 @@ class King(Piece):
         moves += self.get_vertical_moves(y, x, 1, c)
 
         if self.color == Color.WHITE:
-            if self.moved is False and Rook(self.color).moved is False:
+            if self.moved is False and self._game.board[0][7] is not None and isinstance(self._game.board[0][7], Rook) and self._game.board[0][7].moved is False:
                 if self._game.board[0][5] is None and self._game.board[0][6] is None:
                     moves.append((y, x+2))
-                if self._game.board[0][3] is None and self._game.board[0][2] is None and self._game.board[0][1] is None:
+            if self.moved is False and self._game.board[0][0] is not None and isinstance(self._game.board[0][0], Rook) and self._game.board[0][0].moved is False:
+                if self._game.board[0][1] is None and self._game.board[0][2] is None and self._game.board[0][3] is None:
                     moves.append((y, x-2))
         if self.color == Color.BLACK:
-            if self.moved is False and Rook(self.color).moved is False:
+            if self.moved is False and self._game.board[7][7] is not None and isinstance(self._game.board[7][7], Rook) and self._game.board[7][7].moved is False:
                 if self._game.board[7][5] is None and self._game.board[7][6] is None:
                     moves.append((y, x+2))
-                if self._game.board[7][3] is None and self._game.board[7][2] is None and self._game.board[7][1] is None:
+            if self.moved is False and self._game.board[7][0] is not None and isinstance(self._game.board[7][0], Rook) and self._game.board[7][0].moved is False:
+                if self._game.board[7][1] is None and self._game.board[7][2] is None and self._game.board[7][3] is None:
                     moves.append((y, x-2))
         return moves
 
     def copy(self):
         """returns a new King of the same color"""
         new_king = King(self.color)
-        new_king.moved = self.moved
+        new_king.moved = True
         return new_king
 
 
@@ -374,7 +376,7 @@ class Rook(Piece):
     def copy(self):
         """returns a new Rook of the same color"""
         new_rook = Rook(self.color)
-        self.moved = True
+        new_rook.moved = True
         return new_rook
 
 
@@ -411,6 +413,12 @@ class Pawn(Piece):
                 moves.append((y + 1, x + 1))
             elif x < 7 and self._game.board[y + 1][x + 1] is not None and c == 1:
                 moves.append((y + 1, x + 1))
+            #en passant
+            if y == 4:
+                if x > 0 and isinstance(self._game.board[y][x - 1], Pawn) and self._game.board[y][x - 1].color != self.color and isinstance(self._game.prior_state[-1][y+2][x-1], Pawn):
+                    moves.append((y + 1, x - 1))
+                if x < 7 and isinstance(self._game.board[y][x + 1], Pawn) and self._game.board[y][x + 1].color != self.color and isinstance(self._game.prior_state[-1][y+2][x+1], Pawn):
+                    moves.append((y + 1, x + 1))
         else:  # if Black pawn
             if y == 6:
                 if self._game.board[y - 1][x] is None and self._game.board[y - 2][x] is None:
@@ -427,6 +435,12 @@ class Pawn(Piece):
                 moves.append((y - 1, x + 1))
             elif x < 7 and self._game.board[y - 1][x + 1] is not None and c == 1:
                 moves.append((y - 1, x + 1))
+            #en passant
+            if y == 3:
+                if x > 0 and isinstance(self._game.board[y][x - 1], Pawn) and self._game.board[y][x - 1].color != self.color and isinstance(self._game.prior_state[-1][y-2][x-1], Pawn):
+                    moves.append((y - 1, x - 1))
+                if x < 7 and isinstance(self._game.board[y][x + 1], Pawn) and self._game.board[y][x + 1].color != self.color and isinstance(self._game.prior_state[-1][y-2][x+1], Pawn):
+                    moves.append((y - 1, x + 1))
         return moves
 
     def copy(self):
@@ -480,27 +494,27 @@ class Game:
         self.board[0][0] = Rook(Color.WHITE)
         self.board[0][7] = Rook(Color.WHITE)
         # Black Rooks
-        #self.board[7][0] = Rook(Color.BLACK)
-        #self.board[7][7] = Rook(Color.BLACK)
+        self.board[7][0] = Rook(Color.BLACK)
+        self.board[7][7] = Rook(Color.BLACK)
 
         # White Knights
         self.board[0][1] = Knight(Color.WHITE)
         self.board[0][6] = Knight(Color.WHITE)
         # Black Knights
-        #self.board[7][1] = Knight(Color.BLACK)
-        #self.board[7][6] = Knight(Color.BLACK)
+        self.board[7][1] = Knight(Color.BLACK)
+        self.board[7][6] = Knight(Color.BLACK)
 
         # White Bishops
         self.board[0][2] = Bishop(Color.WHITE)
         self.board[0][5] = Bishop(Color.WHITE)
         # Black Bishops
-        #self.board[7][2] = Bishop(Color.BLACK)
-        #self.board[7][5] = Bishop(Color.BLACK)
+        self.board[7][2] = Bishop(Color.BLACK)
+        self.board[7][5] = Bishop(Color.BLACK)
 
         # White Queen
         self.board[0][3] = Queen(Color.WHITE)
         # Black Queen
-        #self.board[7][3] = Queen(Color.BLACK)
+        self.board[7][3] = Queen(Color.BLACK)
 
         # White King
         self.board[0][4] = King(Color.WHITE)
@@ -530,11 +544,6 @@ class Game:
         self.board = self.prior_state.pop()
         return True
 
-    def last_move(self, color: Color):
-        """returns the last move/board in prior state"""
-        if len(self.prior_state) == 0:
-            return False
-
     def copy_board(self):
         """copies the entire current game board"""
         new_board = [[None for _ in range(8)] for _ in range(8)]
@@ -553,34 +562,48 @@ class Game:
         # Indicates that the pawn piece has moved.
         if isinstance(piece, Pawn):
             piece.moved = True
-        # If the move will leave the current player in check, deny the move.
+
+            #en passant
+            if y2 == y - 1 and abs(x2 - x) == 1 and self.board[y2+1][x2] is not None and isinstance(self.board[y2+1][x2], Pawn) and self.board[y2+1][x2].color != piece.color:
+                self.board[y2+1][x2] = None
+            elif y2 == y + 1 and abs(x2 - x) == 1 and self.board[y2-1][x2] is not None and isinstance(self.board[y2-1][x2], Pawn) and self.board[y2-1][x2].color != piece.color:
+                self.board[y2-1][x2] = None
+
+        # If the move leave the current player in check, deny the move.
         if self.check(self.current_player):
             self.board = self.prior_state.pop()
             return False
+
         # If the piece is a pawn and in the opposite back rank, it will promote.
         if isinstance(piece, Pawn) and (y2 == 0 or y2 == 7):
             self.board[y2][x2] = Queen(piece.color)
 
+        #castling
         if isinstance(piece, King):
             if piece.moved is False and (y2 == 0 and x2 == 6):
-                self.board[y2][x2] = King(Color.WHITE)
-                self.board[0][5] = Rook(Color.WHITE)
+                self.board[y2][x2] = piece
+                self.board[0][5] = self.board[0][7]
                 self.board[0][7] = None
-        if isinstance(piece, King):
+                piece.moved = True
+                self.board[0][5].moved = True
             if piece.moved is False and (y2 == 0 and x2 == 2):
-                self.board[y2][x2] = King(Color.WHITE)
-                self.board[0][3] = Rook(Color.WHITE)
+                self.board[y2][x2] = piece
+                self.board[0][3] = self.board[0][0]
                 self.board[0][0] = None
-        if isinstance(piece, King):
+                piece.moved = True
+                self.board[0][3].moved = True
             if piece.moved is False and (y2 == 7 and x2 == 6):
-                self.board[y2][x2] = King(Color.WHITE)
-                self.board[7][5] = Rook(Color.WHITE)
+                self.board[y2][x2] = piece
+                self.board[7][5] = self.board[7][7]
                 self.board[7][7] = None
-        if isinstance(piece, King):
-            if piece.moved is False and (y2 == 7 and x2 == 6):
-                self.board[y2][x2] = King(Color.WHITE)
-                self.board[7][3] = Rook(Color.WHITE)
-                self.board[7][7] = None
+                piece.moved = True
+                self.board[7][5].moved = True
+            if piece.moved is False and (y2 == 7 and x2 == 2):
+                self.board[y2][x2] = piece
+                self.board[7][3] = self.board[7][0]
+                self.board[7][0] = None
+                piece.moved = True
+                self.board[7][3].moved = True
 
         # Swaps turns.
         self.current_player = Color.WHITE if self.current_player == Color.BLACK else Color.BLACK
@@ -731,7 +754,6 @@ class Game:
                 piecemoves = piece.valid_moves(random_piece_cords[0], random_piece_cords[1])
             random_move = piecemoves[random.randint(0, len(piecemoves) - 1)]
             self.move(piece, random_piece_cords[0], random_piece_cords[1], random_move[0], random_move[1])
-
             return f'{type(piece)} has been moved.'
 
         # Goes through again and if the value returned is the highest move or best move then it will move.
