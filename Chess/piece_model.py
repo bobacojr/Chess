@@ -229,7 +229,7 @@ class King(Piece):
         moves += self.get_vertical_moves(y, x, 1, c)
 
         if self.color == Color.WHITE:
-            if self.moved is False and self._game.board[0][7] is not None and isinstance(self._game.board[0][7], Rook) and self._game.board[0][7].moved is False and self._game.board[0][5] is None and self._game.board[0][6] is None:
+            if self.moved is False and self._game.board[0][7] is not None and isinstance(self._game.board[0][7], Rook) and self._game.board[0][7].moved is False:
                 if self._game.board[0][5] is None and self._game.board[0][6] is None:
                     moves.append((y, x+2))
             if self.moved is False and self._game.board[0][0] is not None and isinstance(self._game.board[0][0], Rook) and self._game.board[0][0].moved is False:
@@ -247,7 +247,7 @@ class King(Piece):
     def copy(self):
         """returns a new King of the same color"""
         new_king = King(self.color)
-        new_king.moved = True
+        new_king.moved = self.moved
         return new_king
 
 class Queen(Piece):
@@ -369,7 +369,7 @@ class Rook(Piece):
     def copy(self):
         """returns a new Rook of the same color"""
         new_rook = Rook(self.color)
-        new_rook.moved = True
+        new_rook.moved = self.moved
         return new_rook
 
 
@@ -490,23 +490,23 @@ class Game:
         self.board[7][7] = Rook(Color.BLACK)
 
         # White Knights
-        #self.board[0][1] = Knight(Color.WHITE)
+        self.board[0][1] = Knight(Color.WHITE)
         self.board[0][6] = Knight(Color.WHITE)
         # Black Knights
-        #self.board[7][1] = Knight(Color.BLACK)
-        #self.board[7][6] = Knight(Color.BLACK)
+        self.board[7][1] = Knight(Color.BLACK)
+        self.board[7][6] = Knight(Color.BLACK)
 
         # White Bishops
-        #self.board[0][2] = Bishop(Color.WHITE)
-        #self.board[0][5] = Bishop(Color.WHITE)
+        self.board[0][2] = Bishop(Color.WHITE)
+        self.board[0][5] = Bishop(Color.WHITE)
         # Black Bishops
-        #self.board[7][2] = Bishop(Color.BLACK)
-        #self.board[7][5] = Bishop(Color.BLACK)
+        self.board[7][2] = Bishop(Color.BLACK)
+        self.board[7][5] = Bishop(Color.BLACK)
 
         # White Queen
-        #self.board[0][3] = Queen(Color.WHITE)
+        self.board[0][3] = Queen(Color.WHITE)
         # Black Queen
-        #self.board[7][3] = Queen(Color.BLACK)
+        self.board[7][3] = Queen(Color.BLACK)
 
         # White King
         self.board[0][4] = King(Color.WHITE)
@@ -553,6 +553,7 @@ class Game:
         self.prior_state.append(self.copy_board())
         self.board[y][x] = None
         self.board[y2][x2] = piece
+
         # Indicates that the pawn piece has moved.
         if isinstance(piece, Pawn):
             piece.moved = True
@@ -574,13 +575,17 @@ class Game:
         if isinstance(piece, Pawn) and (y2 == 0 or y2 == 7):
             self.board[y2][x2] = Queen(piece.color)
 
+        if isinstance(piece, Rook):
+            self.board[y][x] = None
+            self.board[y2][x2] = piece
+            piece.moved = True
+
         #castling
-        if isinstance(piece, King) and (x2 == 6 or x2 == 2):
+        if isinstance(piece, King):
             if piece.moved is False and (y2 == 0 and x2 == 6) and self.check(Color.WHITE) is False:
                 self.board[y2][x2] = piece
                 self.board[0][5] = self.board[0][7]
                 self.board[0][7] = None
-                piece.moved = True
                 self.board[0][5].moved = True
             if piece.moved is False and (y2 == 0 and x2 == 2) and self.check(Color.WHITE) is False:
                 self.board[y2][x2] = piece
@@ -600,6 +605,10 @@ class Game:
                 self.board[7][0] = None
                 piece.moved = True
                 self.board[7][3].moved = True
+            else:
+                self.board[y][x] = None
+                self.board[y2][x2] = piece
+                piece.moved = True
 
         # Swaps turns.
         self.current_player = Color.WHITE if self.current_player == Color.BLACK else Color.BLACK
